@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Folding Pro</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111">
+<link rel="apple-touch-icon" href="icon.png">
+
+<style>
+body{
+font-family:-apple-system,BlinkMacSystemFont;
+margin:0;
+padding:20px;
+background:#f2f2f7;
+}
+.card{
+background:#fff;
+padding:20px;
+border-radius:16px;
+box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+input,button{
+width:100%;
+padding:14px;
+margin-top:10px;
+border-radius:12px;
+font-size:16px;
+border:1px solid #ccc;
+}
+button{
+background:#000;
+color:#fff;
+border:none;
+}
+canvas{
+margin-top:20px;
+width:100%;
+background:#fff;
+border-radius:12px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>Book Folding PRO</h2>
+
+<input type="text" id="word" placeholder="Введите слово">
+<input type="number" id="pages" placeholder="Количество страниц">
+<input type="number" id="height" placeholder="Высота книги (мм) например 210">
+
+<button onclick="generate()">Сгенерировать схему</button>
+<button onclick="downloadPDF()">Скачать PDF</button>
+
+<canvas id="canvas" height="400"></canvas>
+
+<div id="table"></div>
+</div>
+
+<script>
+let schemeData=[];
+
+function generate(){
+const word=document.getElementById("word").value.trim();
+const pages=parseInt(document.getElementById("pages").value);
+const height=parseInt(document.getElementById("height").value);
+
+if(!word||!pages||!height){
+alert("Заполните все поля");
+return;
+}
+
+schemeData=[];
+const pagesPerLetter=Math.floor(pages/word.length);
+let page=1;
+
+for(let i=0;i<word.length;i++){
+for(let j=0;j<pagesPerLetter;j++){
+let fold=calculateFold(j,pagesPerLetter,height);
+schemeData.push({page:page,fold:fold});
+page++;
+}
+}
+
+drawCanvas(height);
+buildTable();
+}
+
+function calculateFold(index,total,height){
+let progress=index/total;
+let wave=Math.sin(progress*Math.PI);
+return Math.round((height*0.2)+(wave*(height*0.6)));
+}
+
+function drawCanvas(height){
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+canvas.height=height;
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+ctx.strokeStyle="#000";
+ctx.lineWidth=1;
+
+schemeData.forEach((item,i)=>{
+let x=i*2;
+ctx.beginPath();
+ctx.moveTo(x,0);
+ctx.lineTo(x,item.fold);
+ctx.stroke();
+});
+}
+
+function buildTable(){
+let html="<h3>Таблица сгибов</h3>";
+schemeData.forEach(item=>{
+html+="Стр "+item.page+" → "+item.fold+" мм<br>";
+});
+document.getElementById("table").innerHTML=html;
+}
+
+function downloadPDF(){
+let content="Схема Book Folding\n\n";
+schemeData.forEach(item=>{
+content+="Страница "+item.page+" - "+item.fold+" мм\n";
+});
+let blob=new Blob([content],{type:"text/plain"});
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="scheme.txt";
+a.click();
+}
+
+if("serviceWorker" in navigator){
+navigator.serviceWorker.register("sw.js");
+}
+</script>
+
+</body>
+</html>
